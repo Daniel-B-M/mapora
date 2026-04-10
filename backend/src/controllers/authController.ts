@@ -11,7 +11,7 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
-  // Validación básica de formato email
+  // Validación básica de formato email jajaja
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     res.status(400).json({ error: 'Email inválido' });
     return;
