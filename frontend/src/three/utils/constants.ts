@@ -12,5 +12,7 @@ export const DIRECTIONAL_LIGHT_Y = 10;
 export const DIRECTIONAL_LIGHT_Z = 5;
 
 export const MODEL_TARGET_SIZE = 3;
-export const ORBIT_DAMPING_FACTOR = 0.05;
+export const ORBIT_DAMPING_FACTOR = 0.12;
 export const MAX_PIXEL_RATIO = 2;
+export const ZOOM_OUT_MAX_STEPS = 3;
+export const ZOOM_IN_MAX_STEPS = 60;

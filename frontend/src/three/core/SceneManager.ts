@@ -20,6 +20,8 @@ import {
   DIRECTIONAL_LIGHT_Z,
   MODEL_TARGET_SIZE,
   ORBIT_DAMPING_FACTOR,
+  ZOOM_OUT_MAX_STEPS,
+  ZOOM_IN_MAX_STEPS,
 } from '@/three/utils/constants';
 
 export class SceneManager {
@@ -77,18 +79,15 @@ export class SceneManager {
       MIDDLE: THREE.MOUSE.DOLLY,
       RIGHT: THREE.MOUSE.PAN,
     };
-    this.controls.target.set(0, 0, 0);
-    this.controls.update();
+    this.controls.screenSpacePanning = false; // pan en plano XZ, bloquea paneo vertical de forma nativa
 
-    // Bloquear paneo vertical: solo permitir movimiento en el eje X
-    const lockedTargetY = this.controls.target.y;
-    this.controls.addEventListener('change', () => {
-      const dy = this.controls.target.y - lockedTargetY;
-      if (dy !== 0) {
-        this.controls.target.y = lockedTargetY;
-        this.camera.position.y -= dy;
-      }
-    });
+    this.controls.target.set(0, 0, 0);
+
+    const initialDistance = this.camera.position.distanceTo(this.controls.target);
+    this.controls.maxDistance = initialDistance * Math.pow(1 / 0.95, ZOOM_OUT_MAX_STEPS);
+    this.controls.minDistance = initialDistance * Math.pow(0.95, ZOOM_IN_MAX_STEPS);
+
+    this.controls.update();
   }
 
   async loadModel(url: string): Promise<THREE.Group> {
@@ -330,7 +329,7 @@ export class SceneManager {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
 
-      const edges = new THREE.EdgesGeometry(mesh.geometry, 15);
+      const edges = new THREE.EdgesGeometry(mesh.geometry, 30);
       const lines = new THREE.LineSegments(edges, edgeMaterial);
       mesh.add(lines);
     });
