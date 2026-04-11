@@ -11,6 +11,13 @@ useKeyboardShortcuts({
   onLogCamera: () => sceneManager.logCameraPosition(),
 });
 
+let lastTap = 0;
+function handleTouchEnd() {
+  const now = Date.now();
+  if (now - lastTap < 300) sceneManager.resetCamera();
+  lastTap = now;
+}
+
 function setVisited(meshName: string, visited: boolean) {
   sceneManager.setVisited(meshName, visited);
 }
@@ -20,7 +27,7 @@ defineExpose({ sceneManager, selectedMeshName, isLoading, cameraDistance, setVis
 
 <template>
   <div class="relative w-full h-full">
-    <canvas ref="canvasRef" class="block w-full h-full" />
+    <canvas ref="canvasRef" class="block w-full h-full" @touchend="handleTouchEnd" />
 
     <Transition name="fade">
       <div

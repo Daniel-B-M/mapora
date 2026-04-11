@@ -10,9 +10,21 @@ export const DUMMY_COUNTRIES: Record<string, CountryData> = {
     meshName: 'default',
     displayName: 'País Seleccionado',
     images: [
-      { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80', alt: 'Paisaje montañoso' },
-      { src: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&q=80', alt: 'Ciudad al atardecer' },
-      { src: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80', alt: 'Arquitectura histórica' },
+      [
+        { src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80', alt: 'Paisaje montañoso' },
+        { src: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80', alt: 'Cumbre nevada' },
+        { src: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600&q=80', alt: 'Valle verde' },
+      ],
+      [
+        { src: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&q=80', alt: 'Ciudad al atardecer' },
+        { src: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80', alt: 'Skyline urbano' },
+        { src: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=600&q=80', alt: 'Calle histórica' },
+      ],
+      [
+        { src: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=80', alt: 'Arquitectura histórica' },
+        { src: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=600&q=80', alt: 'Monumento clásico' },
+        { src: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=600&q=80', alt: 'Plaza central' },
+      ],
     ],
     videos: [
       { src: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=600&q=80', alt: 'Video cultural' },
@@ -30,6 +42,13 @@ export const DUMMY_COUNTRIES: Record<string, CountryData> = {
  * Si el mesh no tiene datos propios, retorna los datos default
  * con el displayName ajustado al nombre del mesh.
  */
+function meshNameToDisplayName(meshName: string): string {
+  return meshName
+    .replace(/_\d+$/, '')               // quita sufijos tipo _1, _2
+    .replace(/_/g, ' ')                 // guiones bajos → espacios
+    .replace(/\b\w/g, c => c.toUpperCase()); // capitaliza cada palabra
+}
+
 export function getCountryByMesh(meshName: string): CountryData {
   if (DUMMY_COUNTRIES[meshName]) {
     return DUMMY_COUNTRIES[meshName];
@@ -38,6 +57,6 @@ export function getCountryByMesh(meshName: string): CountryData {
   return {
     ...DUMMY_COUNTRIES.default,
     meshName,
-    displayName: meshName,
+    displayName: meshNameToDisplayName(meshName),
   };
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import type { CountryMedia } from '@/types/country';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import type { CountryData } from '@/types/country';
@@ -51,18 +52,37 @@ const sitioNames = computed(() =>
 );
 
 /* ─── Lightbox state ─────────────────────────────────────── */
-const lightboxSrc = ref<string | null>(null);
-const lightboxAlt = ref('');
+const lightboxImages = ref<CountryMedia[]>([]);
+const lightboxIndex = ref(0);
 const lightboxType = ref<'image' | 'video'>('image');
 
-function openLightbox(src: string, alt: string, type: 'image' | 'video' = 'image') {
-  lightboxSrc.value = src;
-  lightboxAlt.value = alt;
+const lightboxSrc = computed(() => lightboxImages.value[lightboxIndex.value]?.src ?? null);
+const lightboxAlt = computed(() => lightboxImages.value[lightboxIndex.value]?.alt ?? '');
+
+function preloadImages(images: CountryMedia[]) {
+  images.forEach((img) => {
+    const el = new Image();
+    el.src = img.src;
+  });
+}
+
+function openLightbox(images: CountryMedia[], index = 0, type: 'image' | 'video' = 'image') {
+  lightboxImages.value = images;
+  lightboxIndex.value = index;
   lightboxType.value = type;
+  if (type === 'image') preloadImages(images);
 }
 
 function closeLightbox() {
-  lightboxSrc.value = null;
+  lightboxImages.value = [];
+}
+
+function prevImage() {
+  if (lightboxIndex.value > 0) lightboxIndex.value--;
+}
+
+function nextImage() {
+  if (lightboxIndex.value < lightboxImages.value.length - 1) lightboxIndex.value++;
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -74,11 +94,15 @@ function onKeydown(e: KeyboardEvent) {
       emit('close');
     }
   }
+  if (lightboxSrc.value) {
+    if (e.key === 'ArrowLeft') prevImage();
+    if (e.key === 'ArrowRight') nextImage();
+  }
 }
 
 // Limpiar lightbox cuando se cierra el modal
 watch(() => props.open, (isOpen) => {
-  if (!isOpen) lightboxSrc.value = null;
+  if (!isOpen) closeLightbox();
 });
 
 onMounted(() => window.addEventListener('keydown', onKeydown));
@@ -122,14 +146,9 @@ function onOverlayClick(e: MouseEvent) {
             <!-- Images column -->
             <div class="modal-column">
               <div class="media-mosaic">
-                <div class="media-large" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[0]?.src, country.images[0]?.alt ?? '')">
+                <div class="media-large" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[0], 0)">
                   <div v-if="loading" class="skeleton" />
-                  <img
-                    v-else
-                    :src="country.images[0]?.src"
-                    :alt="country.images[0]?.alt ?? ''"
-                    class="media-img"
-                  />
+                  <img v-else :src="country.images[0]?.[0]?.src" :alt="country.images[0]?.[0]?.alt ?? ''" class="media-img" />
                   <span v-if="!loading" class="media-label">{{ sitioNames[0] }}</span>
                   <div v-if="!loading" class="expand-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
@@ -139,9 +158,9 @@ function onOverlayClick(e: MouseEvent) {
                   </div>
                 </div>
                 <div class="media-row">
-                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[1]?.src, country.images[1]?.alt ?? '')">
+                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[1], 0)">
                     <div v-if="loading" class="skeleton" />
-                    <img v-else :src="country.images[1]?.src" :alt="country.images[1]?.alt ?? ''" class="media-img" />
+                    <img v-else :src="country.images[1]?.[0]?.src" :alt="country.images[1]?.[0]?.alt ?? ''" class="media-img" />
                     <span v-if="!loading" class="media-label">{{ sitioNames[1] }}</span>
                     <div v-if="!loading" class="expand-icon">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
@@ -150,9 +169,9 @@ function onOverlayClick(e: MouseEvent) {
                       </svg>
                     </div>
                   </div>
-                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[2]?.src, country.images[2]?.alt ?? '')">
+                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[2], 0)">
                     <div v-if="loading" class="skeleton" />
-                    <img v-else :src="country.images[2]?.src" :alt="country.images[2]?.alt ?? ''" class="media-img" />
+                    <img v-else :src="country.images[2]?.[0]?.src" :alt="country.images[2]?.[0]?.alt ?? ''" class="media-img" />
                     <span v-if="!loading" class="media-label">{{ sitioNames[2] }}</span>
                     <div v-if="!loading" class="expand-icon">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
@@ -282,11 +301,7 @@ function onOverlayClick(e: MouseEvent) {
             class="lightbox-overlay"
             @click="closeLightbox"
           >
-            <button
-              class="lightbox-close"
-              aria-label="Cerrar vista expandida"
-              @click.stop="closeLightbox"
-            >
+            <button class="lightbox-close" aria-label="Cerrar vista expandida" @click.stop="closeLightbox">
               <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
                 <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
@@ -300,15 +315,45 @@ function onOverlayClick(e: MouseEvent) {
               allowfullscreen
               @click.stop
             />
-            <img
-              v-else
-              :src="lightboxSrc"
-              :alt="lightboxAlt"
-              class="lightbox-media"
-              @click.stop
-            />
+            <div v-else class="lightbox-image-row" @click.stop>
+              <button
+                class="lightbox-nav"
+                :class="{ 'lightbox-nav--hidden': lightboxIndex === 0 }"
+                aria-label="Imagen anterior"
+                @click.stop="prevImage"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </button>
 
-            <p v-if="lightboxAlt" class="lightbox-caption">{{ lightboxAlt }}</p>
+              <Transition name="img-slide" mode="out-in">
+                <img
+                  :key="lightboxIndex"
+                  :src="lightboxSrc"
+                  :alt="lightboxAlt"
+                  class="lightbox-media"
+                />
+              </Transition>
+
+              <button
+                class="lightbox-nav"
+                :class="{ 'lightbox-nav--hidden': lightboxIndex === lightboxImages.length - 1 }"
+                aria-label="Imagen siguiente"
+                @click.stop="nextImage"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="lightbox-footer">
+              <p v-if="lightboxAlt" class="lightbox-caption">{{ lightboxAlt }}</p>
+              <p v-if="lightboxImages.length > 1" class="lightbox-counter">
+                {{ lightboxIndex + 1 }} / {{ lightboxImages.length }}
+              </p>
+            </div>
           </div>
         </Transition>
       </div>
@@ -859,12 +904,70 @@ function onOverlayClick(e: MouseEvent) {
     0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-.lightbox-caption {
+.lightbox-image-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lightbox-nav {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.lightbox-nav--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.lightbox-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
   margin-top: 1rem;
+}
+
+.lightbox-caption {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.55);
   letter-spacing: 0.05em;
   text-align: center;
+  margin: 0;
+}
+
+.lightbox-counter {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+/* ─── Image slide transition ────────────────────────────── */
+.img-slide-enter-active,
+.img-slide-leave-active {
+  transition: opacity 0.18s ease;
+}
+.img-slide-enter-from,
+.img-slide-leave-to {
+  opacity: 0;
 }
 
 /* ─── Lightbox animations ───────────────────────────────── */
