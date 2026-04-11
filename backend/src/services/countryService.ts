@@ -1,5 +1,5 @@
 import { Country, type ICountry } from '../models/Country';
-import { searchImages } from './pexelsService';
+import { searchImagesPerPlace } from './pexelsService';
 import { searchVideos } from './vimeoService';
 
 export interface CountryMedia {
@@ -41,15 +41,15 @@ async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos
   const sitios = c.lugares_turisticos.slice(0, 3);
 
   const [pexelsResults, youtubeResults] = await Promise.all([
-    searchImages(sitios.map((l) => l.nombre)),
+    searchImagesPerPlace(sitios.map((l) => l.nombre), 3),
     searchVideos(sitios.map((l) => l.nombre)),
   ]);
 
   return {
-    images: sitios.map((l, i) => {
-      const found = pexelsResults[i];
-      return { src: found?.url ?? '', alt: found?.alt ?? l.nombre };
-    }),
+    // Devuelve array plano de 9 imágenes (3 por lugar): el frontend las agrupa de a 3
+    images: sitios.flatMap((l, i) =>
+      (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
+    ),
     videos: sitios.map((l, i) => {
       const found = youtubeResults[i];
       return {
