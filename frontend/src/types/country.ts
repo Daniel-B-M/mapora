@@ -13,8 +13,8 @@ export interface CountryData {
   meshName: string;
   /** Nombre presentable del país */
   displayName: string;
-  /** Imágenes del país */
-  images: CountryMedia[];
+  /** Imágenes del país agrupadas por lugar turístico (3 grupos de hasta 3 imágenes) */
+  images: CountryMedia[][];
   /** Videos del país */
   videos: CountryMedia[];
   /** Viñetas columna izquierda: país, moneda, idiomas */

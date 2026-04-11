@@ -76,7 +76,11 @@ watch(
           displayName: apiData.nombre,
           infoGeneral: apiData.infoGeneral,
           lugaresTuristicos: apiData.lugaresTuristicos,
-          images: apiData.images.length ? apiData.images : base.images,
+          images: (() => {
+            const raw = apiData.images;
+            const grouped = [raw.slice(0, 3), raw.slice(3, 6), raw.slice(6, 9)];
+            return grouped.every((g) => g.length > 0) ? grouped : base.images;
+          })(),
           videos: apiData.videos.length ? apiData.videos : base.videos,
           visited: visitedMeshNames.value.has(meshName),
         };
