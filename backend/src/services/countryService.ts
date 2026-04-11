@@ -47,10 +47,9 @@ async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos
 
   return {
     // 9 imágenes en array plano: 3 por lugar, el frontend las agrupa con chunkArray(images, 3)
-    images: sitios.flatMap((l, i) => {
-      const placeImages = pexelsResults[i] ?? [];
-      return placeImages.map((img) => ({ src: img.url, alt: img.alt || l.nombre }));
-    }),
+    images: sitios.flatMap((l, i) =>
+      (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
+    ),
     videos: sitios.map((l, i) => {
       const found = youtubeResults[i];
       return {

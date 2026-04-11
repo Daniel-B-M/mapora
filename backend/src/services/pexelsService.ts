@@ -6,8 +6,8 @@ export interface PexelsImage {
 }
 
 /**
- * Busca N imágenes en Pexels para una query dada.
- * Retorna un array de hasta `count` resultados.
+ * Busca N imágenes en Pexels para la query dada.
+ * Retorna un array de hasta `count` imágenes (puede ser menor si Pexels devuelve menos).
  */
 export async function searchImagesForPlace(query: string, count = 3): Promise<PexelsImage[]> {
   const apiKey = process.env.PEXELS_API_KEY;
@@ -39,8 +39,8 @@ export async function searchImagesForPlace(query: string, count = 3): Promise<Pe
 }
 
 /**
- * Busca N imágenes para cada query en paralelo.
- * Retorna un array de arrays, uno por query.
+ * Busca N imágenes por cada query en paralelo.
+ * Retorna un array de arrays: una sublista por query.
  */
 export async function searchImagesPerPlace(queries: string[], count = 3): Promise<PexelsImage[][]> {
   return Promise.all(queries.map((q) => searchImagesForPlace(q, count)));
