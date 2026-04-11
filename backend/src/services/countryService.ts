@@ -46,7 +46,7 @@ async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos
   ]);
 
   return {
-    // Devuelve array plano de 9 imágenes (3 por lugar): el frontend las agrupa de a 3
+    // 9 imágenes en array plano: 3 por lugar, el frontend las agrupa con chunkArray(images, 3)
     images: sitios.flatMap((l, i) =>
       (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
     ),

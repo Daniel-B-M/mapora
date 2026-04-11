@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+
+const showHelp = ref(false);
+const showAbout = ref(false);
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
+  return result;
+}
 import { useRouter } from 'vue-router';
 import ThreeCanvas from '@/components/map/ThreeCanvas.vue';
 import BaseHeadline from '@/components/ui/BaseHeadline.vue';
@@ -76,11 +85,7 @@ watch(
           displayName: apiData.nombre,
           infoGeneral: apiData.infoGeneral,
           lugaresTuristicos: apiData.lugaresTuristicos,
-          images: (() => {
-            const raw = apiData.images;
-            const grouped = [raw.slice(0, 3), raw.slice(3, 6), raw.slice(6, 9)];
-            return grouped.every((g) => g.length > 0) ? grouped : base.images;
-          })(),
+          images: (() => { const c = chunkArray(apiData.images, 3); return c.length >= 3 ? c : base.images; })(),
           videos: apiData.videos.length ? apiData.videos : base.videos,
           visited: visitedMeshNames.value.has(meshName),
         };
@@ -174,6 +179,101 @@ async function toggleVisited(meshName: string) {
       <ThreeCanvas ref="threeCanvasRef" />
     </div>
 
+    <!-- Help button + shortcuts panel -->
+    <div class="absolute bottom-6 right-6 z-20 flex flex-col items-end gap-2">
+      <!-- About row -->
+      <div class="relative flex items-end gap-2">
+        <Transition name="help-fade">
+          <div v-if="showAbout" class="help-panel help-panel--narrow absolute right-full mr-2 bottom-0">
+            <p class="help-section-label">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8h.01M12 12v4"/></svg>
+              Acerca de Mapora
+            </p>
+            <p class="about-text">
+              Mapora es un mapa interactivo en 3D donde puedes explorar el mundo y llevar un registro de los países que has visitado.
+            </p>
+            <p class="about-text" style="margin-top: 0.5rem;">
+              Crea una cuenta para guardar tu progreso y ver cuántos países has recorrido.
+            </p>
+          </div>
+        </Transition>
+        <button class="help-btn" @click="showAbout = !showAbout; showHelp = false" :class="{ 'help-btn--active': showAbout }">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8h.01M12 12v4"/></svg>
+        </button>
+      </div>
+      <!-- Help row -->
+      <div class="relative flex items-end gap-2">
+        <Transition name="help-fade">
+          <div v-if="showHelp" class="help-panel absolute right-full mr-2 bottom-0">
+          <p class="help-section-label">
+            <!-- Monitor icon -->
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+            Escritorio
+          </p>
+          <ul class="help-list">
+            <li>
+              <span class="help-key">
+                <!-- Mouse icon -->
+                <svg width="11" height="13" viewBox="0 0 24 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="18" height="28" rx="9"/><line x1="12" y1="1" x2="12" y2="14"/></svg>
+                Clic + arrastrar
+              </span>
+              <span class="help-desc">Mover mapa</span>
+            </li>
+            <li>
+              <span class="help-key">
+                <!-- Scroll wheel icon -->
+                <svg width="11" height="13" viewBox="0 0 24 36" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="1" width="18" height="28" rx="9"/><line x1="12" y1="1" x2="12" y2="14"/><rect x="10" y="5" width="4" height="6" rx="2" fill="currentColor" stroke="none"/></svg>
+                Scroll
+              </span>
+              <span class="help-desc">Zoom</span>
+            </li>
+            <li>
+              <span class="help-key">
+                <!-- Keyboard key icon -->
+                <svg width="13" height="11" viewBox="0 0 24 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="22" height="18" rx="3"/><line x1="8" y1="7" x2="8" y2="7" stroke-width="3" stroke-linecap="round"/><line x1="12" y1="7" x2="12" y2="7" stroke-width="3" stroke-linecap="round"/><line x1="16" y1="7" x2="16" y2="7" stroke-width="3" stroke-linecap="round"/><line x1="8" y1="13" x2="16" y2="13" stroke-width="2.5" stroke-linecap="round"/></svg>
+                F
+              </span>
+              <span class="help-desc">Restablecer vista</span>
+            </li>
+          </ul>
+
+          <p class="help-section-label" style="margin-top: 0.85rem;">
+            <!-- Phone icon -->
+            <svg width="10" height="13" viewBox="0 0 20 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="18" height="26" rx="4"/><line x1="8" y1="23" x2="12" y2="23" stroke-width="2.5"/></svg>
+            Móvil
+          </p>
+          <ul class="help-list">
+            <li>
+              <span class="help-key">
+                <!-- Single finger icon -->
+                <svg width="10" height="13" viewBox="0 0 20 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 1v16"/><path d="M6 8c0-2.2 1.8-4 4-4s4 1.8 4 4v8a4 4 0 0 1-8 0V8z"/></svg>
+                1 dedo
+              </span>
+              <span class="help-desc">Mover mapa</span>
+            </li>
+            <li>
+              <span class="help-key">
+                <!-- Two fingers icon -->
+                <svg width="14" height="13" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1v14"/><path d="M5 8c0-1.7 1.3-3 3-3s3 1.3 3 3v6a3 3 0 0 1-6 0V8z"/><path d="M20 1v14"/><path d="M17 8c0-1.7 1.3-3 3-3s3 1.3 3 3v6a3 3 0 0 1-6 0V8z"/></svg>
+                2 dedos
+              </span>
+              <span class="help-desc">Zoom</span>
+            </li>
+            <li>
+              <span class="help-key">
+                <!-- Double tap icon -->
+                <svg width="10" height="13" viewBox="0 0 20 28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 1v16"/><path d="M6 8c0-2.2 1.8-4 4-4s4 1.8 4 4v8a4 4 0 0 1-8 0V8z"/></svg>
+                Doble tap
+              </span>
+              <span class="help-desc">Restablecer vista</span>
+            </li>
+          </ul>
+        </div>
+        </Transition>
+        <button class="help-btn" @click="showHelp = !showHelp; showAbout = false" :class="{ 'help-btn--active': showHelp }">?</button>
+      </div>
+    </div>
+
     <!-- Country info modal -->
     <CountryModal
       :open="isModalOpen"
@@ -228,4 +328,100 @@ async function toggleVisited(meshName: string) {
 .title-fade-leave-active { transition: opacity 0.3s ease; }
 .title-fade-enter-from,
 .title-fade-leave-to    { opacity: 0; }
+
+/* Help button */
+.help-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.help-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+}
+.help-btn--active {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* Help panel */
+.help-panel {
+  background: rgba(20, 20, 24, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  backdrop-filter: blur(12px);
+  padding: 1rem 1.2rem;
+  min-width: 15rem;
+}
+.help-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.6rem;
+}
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.help-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.help-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
+.help-desc {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.help-panel--narrow {
+  min-width: 0;
+  width: 15rem;
+}
+
+.about-text {
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Help panel transition */
+.help-fade-enter-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.help-fade-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.help-fade-enter-from,
+.help-fade-leave-to { opacity: 0; transform: translateY(6px); }
 </style>
