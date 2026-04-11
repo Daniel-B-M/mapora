@@ -58,10 +58,18 @@ const lightboxType = ref<'image' | 'video'>('image');
 const lightboxSrc = computed(() => lightboxImages.value[lightboxIndex.value]?.src ?? null);
 const lightboxAlt = computed(() => lightboxImages.value[lightboxIndex.value]?.alt ?? '');
 
+function preloadImages(images: CountryMedia[]) {
+  images.forEach((img) => {
+    const el = new Image();
+    el.src = img.src;
+  });
+}
+
 function openImageLightbox(images: CountryMedia[], index = 0) {
   lightboxImages.value = images;
   lightboxIndex.value = index;
   lightboxType.value = 'image';
+  preloadImages(images);
 }
 
 function openVideoLightbox(src: string, alt: string) {
@@ -326,13 +334,14 @@ function onOverlayClick(e: MouseEvent) {
                 allow="autoplay; encrypted-media"
                 allowfullscreen
               />
-              <img
-                v-else
-                :key="lightboxIndex"
-                :src="lightboxSrc"
-                :alt="lightboxAlt"
-                class="lightbox-media"
-              />
+              <Transition v-else name="img-fade" mode="out-in">
+                <img
+                  :key="lightboxIndex"
+                  :src="lightboxSrc"
+                  :alt="lightboxAlt"
+                  class="lightbox-media"
+                />
+              </Transition>
 
               <button
                 class="lightbox-nav"
@@ -944,6 +953,22 @@ function onOverlayClick(e: MouseEvent) {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.35);
   letter-spacing: 0.1em;
+}
+
+/* ─── Image fade transition ─────────────────────────────── */
+.img-fade-enter-active {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.img-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.img-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.img-fade-leave-to {
+  opacity: 0;
+  transform: scale(1.02);
 }
 
 /* ─── Lightbox animations ───────────────────────────────── */
