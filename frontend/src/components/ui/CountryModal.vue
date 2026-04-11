@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import type { CountryMedia } from '@/types/country';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import type { CountryData, CountryMedia } from '@/types/country';
