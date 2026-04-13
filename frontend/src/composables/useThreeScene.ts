@@ -27,6 +27,7 @@ export function useThreeScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_PX) return; // fue un drag, no un click
 
     const mesh = sceneManager.selectAt(e.clientX, e.clientY);
+    if (mesh) e.preventDefault(); // evita el click sintético que abriría el lightbox del modal recién abierto
     selectedMeshName.value = mesh?.name ?? null;
   }
 

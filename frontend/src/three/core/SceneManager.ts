@@ -79,6 +79,10 @@ export class SceneManager {
       MIDDLE: THREE.MOUSE.DOLLY,
       RIGHT: THREE.MOUSE.PAN,
     };
+    this.controls.touches = {
+      ONE: THREE.TOUCH.PAN,
+      TWO: THREE.TOUCH.DOLLY_PAN,
+    };
     this.controls.screenSpacePanning = false; // pan en plano XZ, bloquea paneo vertical de forma nativa
 
     this.controls.target.set(0, 0, 0);
