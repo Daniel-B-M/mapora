@@ -42,7 +42,7 @@ export const DUMMY_COUNTRIES: Record<string, CountryData> = {
  * Si el mesh no tiene datos propios, retorna los datos default
  * con el displayName ajustado al nombre del mesh.
  */
-function meshNameToDisplayName(meshName: string): string {
+export function meshNameToDisplayName(meshName: string): string {
   return meshName
     .replace(/_\d+$/, '')               // quita sufijos tipo _1, _2
     .replace(/_/g, ' ')                 // guiones bajos → espacios

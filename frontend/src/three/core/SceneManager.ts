@@ -35,6 +35,13 @@ export class SceneManager {
   private meshes: THREE.Mesh[] = [];
   private originalMaterials = new Map<string, THREE.Material | THREE.Material[]>();
   private selectedMesh: THREE.Mesh | null = null;
+  private highlightedMesh: THREE.Mesh | null = null;
+
+  // ── Animación de cámara (focus) ────────────────────────────
+  private focusTarget    = new THREE.Vector3();
+  private focusCamPos   = new THREE.Vector3();
+  private isFocusing    = false;
+  private readonly FOCUS_LERP_ALPHA = 0.05;  // 0-1: menor = más suave
   private raycaster = new THREE.Raycaster();
   private readonly selectionMaterial = new THREE.MeshStandardMaterial({
     color: 0x4a90ff,
@@ -121,6 +128,8 @@ export class SceneManager {
   }
 
   selectAt(clientX: number, clientY: number): THREE.Mesh | null {
+    // Si había highlight del buscador, limpiarlo antes de procesar el click
+    this.clearHighlight();
     const rect = this.renderer.domElement.getBoundingClientRect();
     const x = ((clientX - rect.left) / rect.width) * 2 - 1;
     const y = -((clientY - rect.top) / rect.height) * 2 + 1;
@@ -192,20 +201,104 @@ export class SceneManager {
     }
   }
 
-  resetCamera() {
-    if (!this.camera || !this.controls) return;
-    this.camera.position.set(CAMERA_POSITION_X, CAMERA_POSITION_Y, CAMERA_POSITION_Z);
-    this.controls.target.set(0, 0, 0);
-    this.controls.update();
+  /** Devuelve los nombres de todos los meshes cargados en la escena */
+  getMeshNames(): string[] {
+    return this.meshes.map((m) => m.name).filter(Boolean);
   }
 
-  logCameraPosition() {
+  /**
+   * Resalta un mesh por nombre (material azul + outline) sin disparar la selección
+   * del modal. Llama a clearHighlight() antes de resaltar uno nuevo.
+   */
+  highlightMesh(meshName: string) {
+    // Quitar highlight previo si lo hay
+    this.clearHighlight();
+
+    const mesh = this.meshes.find((m) => m.name === meshName);
+    if (!mesh) return;
+
+    // Guardar material original si aún no está guardado
+    if (!this.originalMaterials.has(mesh.uuid)) {
+      this.originalMaterials.set(mesh.uuid, mesh.material);
+    }
+
+    mesh.material = this.selectionMaterial;
+    this.outlinePass.selectedObjects = [mesh];
+    this.highlightedMesh = mesh;
+  }
+
+  /** Elimina el highlight de búsqueda sin cerrar el modal */
+  clearHighlight() {
+    if (!this.highlightedMesh) return;
+    const restoreMaterial = this.visitedMeshNames.has(this.highlightedMesh.name)
+      ? this.visitedMaterial
+      : (this.originalMaterials.get(this.highlightedMesh.uuid) as THREE.Material);
+    if (restoreMaterial) this.highlightedMesh.material = restoreMaterial;
+    // Solo limpiar outline si no hay mesh seleccionado por click
+    if (!this.selectedMesh) this.outlinePass.selectedObjects = [];
+    this.highlightedMesh = null;
+  }
+
+  resetCamera() {
     if (!this.camera || !this.controls) return;
-    const pos = this.camera.position;
-    const target = this.controls.target;
-    console.log(`CAMERA -> x: ${pos.x}, y: ${pos.y}, z: ${pos.z}`);
-    console.log(`TARGET -> x: ${target.x}, y: ${target.y}, z: ${pos.z}`);
-    alert(`Camera: \nx: ${pos.x}\ny: ${pos.y}\nz: ${pos.z}\n\nRevisa la consola para copiar los valores exactos.`);
+    // Animar suavemente de vuelta a la vista inicial (mismo lerp que focusOnMesh)
+    this.focusTarget.set(0, 0, 0);
+    this.focusCamPos.set(CAMERA_POSITION_X, CAMERA_POSITION_Y, CAMERA_POSITION_Z);
+    this.isFocusing = true;
+  }
+
+  /**
+   * Anima suavemente la cámara hacia el centro del mesh dado.
+   * La distancia se escala según el tamaño del bounding box del mesh.
+   */
+  focusOnMesh(meshName: string) {
+    if (!this.camera || !this.controls) return;
+    const mesh = this.meshes.find((m) => m.name === meshName);
+    if (!mesh) return;
+
+    // Centro del mesh en coordenadas de mundo
+    const box = new THREE.Box3().setFromObject(mesh);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+
+    // Tamaño para calcular distancia de zoom
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+
+    // Distancia mínima para encuadrar el mesh bien
+    const fovRad = (this.camera.fov * Math.PI) / 180;
+    let distance = (maxDim / 2) / Math.tan(fovRad / 2) * 1.8;
+
+    // Respetar límites del OrbitControls
+    distance = Math.max(distance, this.controls.minDistance);
+    distance = Math.min(distance, this.controls.maxDistance * 0.6);
+
+    // Mantener mismo ángulo de vista que la cámara actual (dirección normalizada cámara→target)
+    const currentDir = this.camera.position.clone()
+      .sub(this.controls.target).normalize();
+
+    this.focusTarget.copy(center);
+    this.focusCamPos.copy(center).addScaledVector(currentDir, distance);
+    this.isFocusing = true;
+  }
+
+  /** Paso de lerp ejecutado en cada frame del render loop */
+  private _stepFocusLerp() {
+    if (!this.isFocusing) return;
+
+    const a = this.FOCUS_LERP_ALPHA;
+    this.controls.target.lerp(this.focusTarget, a);
+    this.camera.position.lerp(this.focusCamPos, a);
+
+    // Terminamos cuando estamos suficientemente cerca
+    const dTarget = this.controls.target.distanceTo(this.focusTarget);
+    const dCam   = this.camera.position.distanceTo(this.focusCamPos);
+    if (dTarget < 0.001 && dCam < 0.001) {
+      this.controls.target.copy(this.focusTarget);
+      this.camera.position.copy(this.focusCamPos);
+      this.isFocusing = false;
+    }
   }
 
   resize(width: number, height: number) {
@@ -220,6 +313,7 @@ export class SceneManager {
     const tick = () => {
       this.controls?.update();
       onFrame?.();
+      this._stepFocusLerp();
       this.composer.render();
       this.animationId = requestAnimationFrame(tick);
     };
