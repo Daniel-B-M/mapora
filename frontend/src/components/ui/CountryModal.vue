@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import type { CountryData, CountryMedia } from '@/types/country';
@@ -94,9 +94,19 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// Limpiar lightbox cuando se cierra el modal
-watch(() => props.open, (isOpen) => {
-  if (!isOpen) closeLightbox();
+// Bloquea clicks de media hasta que el modal haya pintado 2 frames (evita ghost click del tap en el globo)
+const mediaClickBlocked = ref(false);
+
+watch(() => props.open, async (isOpen) => {
+  if (isOpen) {
+    mediaClickBlocked.value = true;
+    await nextTick();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      mediaClickBlocked.value = false;
+    }));
+  } else {
+    closeLightbox();
+  }
 });
 
 onMounted(() => window.addEventListener('keydown', onKeydown));
@@ -140,7 +150,7 @@ function onOverlayClick(e: MouseEvent) {
             <!-- Images column -->
             <div class="modal-column">
               <div class="media-mosaic">
-                <div class="media-large" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[0], 0)">
+                <div class="media-large" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox(country.images[0], 0)">
                   <div v-if="loading" class="skeleton" />
                   <img v-else :src="country.images[0]?.[0]?.src" :alt="country.images[0]?.[0]?.alt ?? ''" class="media-img" />
                   <span v-if="!loading" class="media-label">{{ sitioNames[0] }}</span>
@@ -152,7 +162,7 @@ function onOverlayClick(e: MouseEvent) {
                   </div>
                 </div>
                 <div class="media-row">
-                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[1], 0)">
+                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox(country.images[1], 0)">
                     <div v-if="loading" class="skeleton" />
                     <img v-else :src="country.images[1]?.[0]?.src" :alt="country.images[1]?.[0]?.alt ?? ''" class="media-img" />
                     <span v-if="!loading" class="media-label">{{ sitioNames[1] }}</span>
@@ -163,7 +173,7 @@ function onOverlayClick(e: MouseEvent) {
                       </svg>
                     </div>
                   </div>
-                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox(country.images[2], 0)">
+                  <div class="media-small" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox(country.images[2], 0)">
                     <div v-if="loading" class="skeleton" />
                     <img v-else :src="country.images[2]?.[0]?.src" :alt="country.images[2]?.[0]?.alt ?? ''" class="media-img" />
                     <span v-if="!loading" class="media-label">{{ sitioNames[2] }}</span>
@@ -194,7 +204,7 @@ function onOverlayClick(e: MouseEvent) {
             <!-- Videos column -->
             <div class="modal-column">
               <div class="media-mosaic">
-                <div class="media-large media-large--video" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox([country.videos[0]], 0, 'video')">
+                <div class="media-large media-large--video" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox([country.videos[0]], 0, 'video')">
                   <div v-if="loading" class="skeleton" />
                   <img v-else :src="country.videos[0]?.thumbnail || country.videos[0]?.src" :alt="country.videos[0]?.alt ?? ''" class="media-img" />
                   <span v-if="!loading" class="media-label">{{ sitioNames[0] }}</span>
@@ -203,7 +213,7 @@ function onOverlayClick(e: MouseEvent) {
                   </div>
                 </div>
                 <div class="media-row">
-                  <div class="media-small media-small--video" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox([country.videos[1]], 0, 'video')">
+                  <div class="media-small media-small--video" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox([country.videos[1]], 0, 'video')">
                     <div v-if="loading" class="skeleton" />
                     <img v-else :src="country.videos[1]?.thumbnail || country.videos[1]?.src" :alt="country.videos[1]?.alt ?? ''" class="media-img" />
                     <span v-if="!loading" class="media-label">{{ sitioNames[1] }}</span>
@@ -211,7 +221,7 @@ function onOverlayClick(e: MouseEvent) {
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
                     </div>
                   </div>
-                  <div class="media-small media-small--video" :class="{ 'media-clickable': !loading }" @click="!loading && openLightbox([country.videos[2]], 0, 'video')">
+                  <div class="media-small media-small--video" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox([country.videos[2]], 0, 'video')">
                     <div v-if="loading" class="skeleton" />
                     <img v-else :src="country.videos[2]?.thumbnail || country.videos[2]?.src" :alt="country.videos[2]?.alt ?? ''" class="media-img" />
                     <span v-if="!loading" class="media-label">{{ sitioNames[2] }}</span>
@@ -779,17 +789,95 @@ function onOverlayClick(e: MouseEvent) {
 
 /* ─── Responsive ────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .modal-overlay {
+    padding: 0.75rem;
+    align-items: flex-end; /* Sheet-style from bottom on mobile */
+  }
+
   .modal-container {
-    padding: 1.25rem;
+    padding: 1.25rem 1rem;
+    border-radius: 1.25rem 1.25rem 0.75rem 0.75rem;
+    max-height: 92vh;
+    max-height: 92dvh;
   }
 
   .modal-title {
     font-size: 1.4rem;
+    margin: 0 0 1rem;
   }
 
   .modal-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .modal-close {
+    width: 44px;
+    height: 44px;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .visited-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+  }
+
+  .lightbox-overlay {
+    padding: 1rem;
+  }
+
+  .lightbox-iframe {
+    width: 95vw;
+    height: 56vw;
+    max-height: 280px;
+  }
+
+  /* Botones de nav superpuestos sobre la imagen en móvil */
+  .lightbox-row {
+    position: relative;
+    width: 100%;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .lightbox-media {
+    max-width: 100vw;
+    max-height: 75vh;
+  }
+
+  .lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .lightbox-nav:first-child {
+    left: 0.75rem;
+  }
+
+  .lightbox-nav:last-child {
+    right: 0.75rem;
+  }
+
+  .lightbox-nav--hidden {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .play-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .play-icon--sm {
+    width: 24px;
+    height: 24px;
   }
 }
 

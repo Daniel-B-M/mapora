@@ -84,6 +84,7 @@ function toggleMode() {
 <style scoped>
 .login-bg {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -208,5 +209,31 @@ function toggleMode() {
   font-size: 0.78rem;
   padding: 0 0.25rem;
   text-decoration: underline;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 2rem 1.25rem;
+    border-radius: 1rem;
+  }
+
+  .login-headline {
+    font-size: 2.25rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.72rem;
+  }
+
+  .field input {
+    padding: 0.65rem 0.8rem;
+    font-size: 1rem; /* Prevents iOS auto-zoom on focus */
+  }
+
+  .login-btn {
+    padding: 0.85rem;
+    font-size: 0.82rem;
+  }
 }
 </style>

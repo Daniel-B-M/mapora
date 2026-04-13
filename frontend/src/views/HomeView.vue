@@ -149,7 +149,7 @@ async function toggleVisited(meshName: string) {
 </script>
 
 <template>
-  <main class="relative w-full h-screen overflow-hidden" style="background-color: #202126;">
+  <main class="relative w-full h-screen h-dvh overflow-hidden" style="background-color: #202126;">
     <!-- Auth button top-right -->
     <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
       <template v-if="auth.isAuthenticated">
@@ -169,7 +169,7 @@ async function toggleVisited(meshName: string) {
       >
         <BaseHeadline
           text="MAPORA"
-          class="text-6xl md:text-[8rem] tracking-[0.2em] font-medium opacity-95"
+          class="text-5xl sm:text-6xl md:text-[8rem] tracking-[0.15em] sm:tracking-[0.2em] font-medium opacity-95"
         />
       </div>
     </Transition>
@@ -180,7 +180,7 @@ async function toggleVisited(meshName: string) {
     </div>
 
     <!-- Help button + shortcuts panel -->
-    <div class="absolute bottom-6 right-6 z-20 flex flex-col items-end gap-2">
+    <div class="absolute bottom-6 right-4 sm:right-6 z-20 flex flex-col items-end gap-2" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
       <!-- About row -->
       <div class="relative flex items-end gap-2">
         <Transition name="help-fade">
@@ -424,4 +424,29 @@ async function toggleVisited(meshName: string) {
 .help-fade-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .help-fade-enter-from,
 .help-fade-leave-to { opacity: 0; transform: translateY(6px); }
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Bigger touch targets on mobile */
+  .help-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  /* Smaller auth buttons on narrow screens */
+  .auth-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.65rem;
+  }
+
+  /* Tighter help panel on very small screens */
+  .help-panel {
+    min-width: 12rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .help-panel--narrow {
+    width: 13rem;
+  }
+}
 </style>
