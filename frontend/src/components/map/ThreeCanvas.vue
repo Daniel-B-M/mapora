@@ -11,10 +11,22 @@ useKeyboardShortcuts({
 });
 
 let lastTap = 0;
-function handleTouchEnd() {
-  const now = Date.now();
-  if (now - lastTap < 300) sceneManager.resetCamera();
-  lastTap = now;
+let touchGestureWasMulti = false;
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length > 1) touchGestureWasMulti = true;
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  // Cuando se sueltan todos los dedos, verificar si fue un gesto multi-touch
+  if (e.touches.length === 0) {
+    if (!touchGestureWasMulti) {
+      const now = Date.now();
+      if (now - lastTap < 300) sceneManager.resetCamera();
+      lastTap = now;
+    }
+    touchGestureWasMulti = false;
+  }
 }
 
 function setVisited(meshName: string, visited: boolean) {
@@ -42,7 +54,7 @@ defineExpose({ sceneManager, selectedMeshName, isLoading, cameraDistance, setVis
 
 <template>
   <div class="relative w-full h-full">
-    <canvas ref="canvasRef" class="block w-full h-full" @touchend="handleTouchEnd" />
+    <canvas ref="canvasRef" class="block w-full h-full" @touchstart="handleTouchStart" @touchend="handleTouchEnd" />
 
     <Transition name="fade">
       <div

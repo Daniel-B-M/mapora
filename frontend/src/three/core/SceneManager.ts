@@ -98,6 +98,11 @@ export class SceneManager {
     this.controls.maxDistance = initialDistance * Math.pow(1 / 0.95, ZOOM_OUT_MAX_STEPS);
     this.controls.minDistance = initialDistance * Math.pow(0.95, ZOOM_IN_MAX_STEPS);
 
+    // Cancelar cualquier animación de foco cuando el usuario empieza a interactuar
+    this.controls.addEventListener('start', () => {
+      this.isFocusing = false;
+    });
+
     this.controls.update();
   }
 
