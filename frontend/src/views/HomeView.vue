@@ -191,12 +191,12 @@ function onSearchSelect(meshName: string) {
     </div>
 
     <!-- Search bar bottom center -->
-    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-full px-4 flex justify-center" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <div class="absolute left-1/2 -translate-x-1/2 z-20 w-full px-4 flex justify-center" style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));">
       <SearchBar :suggestions="searchSuggestions" @select="onSearchSelect" />
     </div>
 
     <!-- Help button + shortcuts panel -->
-    <div class="absolute bottom-6 right-4 sm:right-6 z-20 flex flex-col items-end gap-2" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <div class="absolute right-4 sm:right-6 z-20 flex flex-col items-end gap-2" style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));">
       <!-- Auth row -->
       <div class="flex items-center gap-2">
         <template v-if="auth.isAuthenticated">

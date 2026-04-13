@@ -15,13 +15,29 @@ export function useThreeScene(canvasRef: Ref<HTMLCanvasElement | null>) {
 
   let pointerDownX = 0;
   let pointerDownY = 0;
+  const activePointerIds = new Set<number>();
+  let gestureHadMultiplePointers = false;
 
   function onPointerDown(e: PointerEvent) {
-    pointerDownX = e.clientX;
-    pointerDownY = e.clientY;
+    activePointerIds.add(e.pointerId);
+    if (activePointerIds.size === 1) {
+      // Solo registrar coordenadas del primer dedo
+      pointerDownX = e.clientX;
+      pointerDownY = e.clientY;
+      gestureHadMultiplePointers = false;
+    } else {
+      // Segundo dedo o más → es un gesto multi-touch (pinch/zoom), no un click
+      gestureHadMultiplePointers = true;
+    }
   }
 
   function onPointerUp(e: PointerEvent) {
+    activePointerIds.delete(e.pointerId);
+    // Si quedan más punteros activos, esperar a que terminen todos
+    if (activePointerIds.size > 0) return;
+    // Si fue multi-touch (pinch), no contar como click
+    if (gestureHadMultiplePointers) return;
+
     const dx = e.clientX - pointerDownX;
     const dy = e.clientY - pointerDownY;
     if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_PX) return; // fue un drag, no un click
@@ -29,6 +45,10 @@ export function useThreeScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     const mesh = sceneManager.selectAt(e.clientX, e.clientY);
     if (mesh) e.preventDefault(); // evita el click sintético que abriría el lightbox del modal recién abierto
     selectedMeshName.value = mesh?.name ?? null;
+  }
+
+  function onPointerCancel(e: PointerEvent) {
+    activePointerIds.delete(e.pointerId);
   }
 
   onMounted(async () => {
@@ -40,6 +60,7 @@ export function useThreeScene(canvasRef: Ref<HTMLCanvasElement | null>) {
 
     canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerCancel);
 
     resizeObserver = new ResizeObserver(() => {
       sceneManager.resize(canvas.clientWidth, canvas.clientHeight);
@@ -66,6 +87,7 @@ export function useThreeScene(canvasRef: Ref<HTMLCanvasElement | null>) {
     const canvas = canvasRef.value;
     canvas?.removeEventListener('pointerdown', onPointerDown);
     canvas?.removeEventListener('pointerup', onPointerUp);
+    canvas?.removeEventListener('pointercancel', onPointerCancel);
     resizeObserver?.disconnect();
     sceneManager.dispose();
   });
