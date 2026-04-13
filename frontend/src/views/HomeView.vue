@@ -3,24 +3,25 @@ import { ref, watch, computed } from 'vue';
 
 const showHelp = ref(false);
 const showAbout = ref(false);
+const showLogin = ref(false);
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
   return result;
 }
-import { useRouter } from 'vue-router';
 import ThreeCanvas from '@/components/map/ThreeCanvas.vue';
 import BaseHeadline from '@/components/ui/BaseHeadline.vue';
 import CountryModal from '@/components/ui/CountryModal.vue';
-import { getCountryByMesh } from '@/data/dummyCountries';
+import LoginModal from '@/components/ui/LoginModal.vue';
+import SearchBar from '@/components/ui/SearchBar.vue';
+import { getCountryByMesh, meshNameToDisplayName } from '@/data/dummyCountries';
 import { getCountryByMeshName } from '@/services/countryApi';
 import { useAuthStore } from '@/stores/auth';
 import type { CountryData } from '@/types/country';
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-const router = useRouter();
 const auth = useAuthStore();
 
 const threeCanvasRef = ref<InstanceType<typeof ThreeCanvas> | null>(null);
@@ -32,6 +33,15 @@ const loadingCountry = ref(false);
 const showTitle = computed(() => {
   const d = threeCanvasRef.value?.cameraDistance ?? Infinity;
   return d >= 2.6;
+});
+
+// Sugerencias de búsqueda: disponibles solo cuando el modelo 3D ha cargado
+const searchSuggestions = computed(() => {
+  if (threeCanvasRef.value?.isLoading !== false) return [];
+  return (threeCanvasRef.value?.getMeshNames() ?? []).map((meshName) => ({
+    meshName,
+    displayName: meshNameToDisplayName(meshName),
+  }));
 });
 
 // --- Visited: set local de meshNames ---
@@ -106,11 +116,14 @@ watch(
   },
 );
 
-/** Al cerrar sesión, restaurar todos los colores y limpiar el set */
+/** Al iniciar o cerrar sesión, sincronizar colores de visitados */
 watch(
   () => auth.isAuthenticated,
   (authenticated) => {
-    if (!authenticated) {
+    if (authenticated) {
+      visitedMeshNames.value = new Set(auth.user?.progreso.paises_visitados ?? []);
+      applyVisitedColors();
+    } else {
       for (const meshName of visitedMeshNames.value) {
         threeCanvasRef.value?.setVisited(meshName, false);
       }
@@ -146,20 +159,18 @@ async function toggleVisited(meshName: string) {
   await persistVisited(meshName, newVisited);
 }
 
+/** Resalta el país seleccionado desde el buscador sin abrir el modal */
+function onSearchSelect(meshName: string) {
+  // Cerrar modal si estaba abierto por click previo
+  isModalOpen.value = false;
+  threeCanvasRef.value?.highlightMesh(meshName);
+  threeCanvasRef.value?.focusOnMesh(meshName);
+}
+
 </script>
 
 <template>
   <main class="relative w-full h-screen h-dvh overflow-hidden" style="background-color: #202126;">
-    <!-- Auth button top-right -->
-    <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
-      <template v-if="auth.isAuthenticated">
-        <span class="auth-username">{{ auth.user?.username }}</span>
-        <button class="auth-btn" @click="auth.logout()">Salir</button>
-      </template>
-      <button v-else class="auth-btn auth-btn--login" @click="router.push({ name: 'login' })">
-        Iniciar sesión
-      </button>
-    </div>
 
     <!-- Map Title overlay -->
     <Transition name="title-fade">
@@ -179,8 +190,32 @@ async function toggleVisited(meshName: string) {
       <ThreeCanvas ref="threeCanvasRef" />
     </div>
 
+    <!-- Search bar bottom center -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 w-full px-4 flex justify-center" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+      <SearchBar :suggestions="searchSuggestions" @select="onSearchSelect" />
+    </div>
+
     <!-- Help button + shortcuts panel -->
     <div class="absolute bottom-6 right-4 sm:right-6 z-20 flex flex-col items-end gap-2" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+      <!-- Auth row -->
+      <div class="flex items-center gap-2">
+        <template v-if="auth.isAuthenticated">
+          <span class="auth-username">{{ auth.user?.username }}</span>
+          <button class="help-btn" @click="auth.logout()" title="Cerrar sesión">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </template>
+        <button v-else class="help-btn help-btn--login" @click="showLogin = true" title="Iniciar sesión">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </button>
+      </div>
       <!-- About row -->
       <div class="relative flex items-end gap-2">
         <Transition name="help-fade">
@@ -231,7 +266,7 @@ async function toggleVisited(meshName: string) {
               <span class="help-key">
                 <!-- Keyboard key icon -->
                 <svg width="13" height="11" viewBox="0 0 24 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="22" height="18" rx="3"/><line x1="8" y1="7" x2="8" y2="7" stroke-width="3" stroke-linecap="round"/><line x1="12" y1="7" x2="12" y2="7" stroke-width="3" stroke-linecap="round"/><line x1="16" y1="7" x2="16" y2="7" stroke-width="3" stroke-linecap="round"/><line x1="8" y1="13" x2="16" y2="13" stroke-width="2.5" stroke-linecap="round"/></svg>
-                F
+                Shift F
               </span>
               <span class="help-desc">Restablecer vista</span>
             </li>
@@ -274,6 +309,9 @@ async function toggleVisited(meshName: string) {
       </div>
     </div>
 
+    <!-- Login modal -->
+    <LoginModal v-if="showLogin" @close="showLogin = false" />
+
     <!-- Country info modal -->
     <CountryModal
       :open="isModalOpen"
@@ -286,42 +324,22 @@ async function toggleVisited(meshName: string) {
 </template>
 
 <style scoped>
-.auth-btn {
-  padding: 0.4rem 1rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 2rem;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-}
-
-.auth-btn:hover {
-  background: rgba(255, 255, 255, 0.13);
-  color: #fff;
-}
-
-.auth-btn--login {
-  border-color: rgba(11, 100, 244, 0.5);
-  color: #7eb3ff;
-}
-
-.auth-btn--login:hover {
-  background: rgba(11, 100, 244, 0.15);
-  border-color: rgba(11, 100, 244, 0.8);
-  color: #fff;
-}
-
 .auth-username {
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.help-btn--login {
+  border-color: rgba(11, 100, 244, 0.5);
+  color: #7eb3ff;
+}
+
+.help-btn--login:hover {
+  background: rgba(11, 100, 244, 0.15);
+  border-color: rgba(11, 100, 244, 0.8);
+  color: #fff;
 }
 
 .title-fade-enter-active { transition: opacity 0.5s ease; }
@@ -431,12 +449,6 @@ async function toggleVisited(meshName: string) {
   .help-btn {
     width: 2.75rem;
     height: 2.75rem;
-  }
-
-  /* Smaller auth buttons on narrow screens */
-  .auth-btn {
-    padding: 0.35rem 0.75rem;
-    font-size: 0.65rem;
   }
 
   /* Tighter help panel on very small screens */

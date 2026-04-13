@@ -8,7 +8,6 @@ const { sceneManager, isLoading, loadError, selectedMeshName, cameraDistance } =
 
 useKeyboardShortcuts({
   onResetCamera: () => sceneManager.resetCamera(),
-  onLogCamera: () => sceneManager.logCameraPosition(),
 });
 
 let lastTap = 0;
@@ -22,7 +21,23 @@ function setVisited(meshName: string, visited: boolean) {
   sceneManager.setVisited(meshName, visited);
 }
 
-defineExpose({ sceneManager, selectedMeshName, isLoading, cameraDistance, setVisited });
+function getMeshNames(): string[] {
+  return sceneManager.getMeshNames();
+}
+
+function highlightMesh(meshName: string) {
+  sceneManager.highlightMesh(meshName);
+}
+
+function clearHighlight() {
+  sceneManager.clearHighlight();
+}
+
+function focusOnMesh(meshName: string) {
+  sceneManager.focusOnMesh(meshName);
+}
+
+defineExpose({ sceneManager, selectedMeshName, isLoading, cameraDistance, setVisited, getMeshNames, highlightMesh, clearHighlight, focusOnMesh });
 </script>
 
 <template>
