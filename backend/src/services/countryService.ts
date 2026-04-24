@@ -1,6 +1,7 @@
 import { Country, type ICountry } from '../models/Country';
 import { searchImagesPerPlace } from './pexelsService';
-import { searchVideos } from './vimeoService';
+import { searchVideo, searchVideos, type VimeoVideo } from './vimeoService';
+import { translatePlaceName } from './translationService';
 
 export interface CountryMedia {
   src: string;
@@ -39,19 +40,45 @@ function buildBaseDTO(c: ICountry): Omit<CountryDTO, 'images' | 'videos'> {
 
 async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos: CountryMedia[] }> {
   const sitios = c.lugares_turisticos.slice(0, 3);
+  const queries = sitios.map((l) => l.nombre_en ?? l.nombre);
 
-  const [pexelsResults, youtubeResults] = await Promise.all([
-    searchImagesPerPlace(sitios.map((l) => l.nombre), 3),
-    searchVideos(sitios.map((l) => l.nombre)),
+  const [pexelsResults, vimeoResults] = await Promise.all([
+    searchImagesPerPlace(queries, 3),
+    searchVideos(queries),
   ]);
 
+  // Para los sitios sin video, intentar traducir y reintentar en background
+  const finalVideos: (VimeoVideo | null)[] = [...vimeoResults];
+  const translationPromises = sitios.map(async (l, i) => {
+    if (finalVideos[i] !== null) return; // ya tiene video, nada que hacer
+    if (l.nombre_en) return; // ya tiene nombre en inglés pero Vimeo no encontró nada
+
+    const nombreEn = await translatePlaceName(l.nombre);
+    if (!nombreEn) return;
+
+    // Guardar nombre_en siempre — aunque Vimeo no encuentre nada, evita retraducciones
+    await Country.updateOne(
+      { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': l.nombre },
+      { $set: { 'lugares_turisticos.$.nombre_en': nombreEn } },
+    );
+
+    const retried = await searchVideo(nombreEn);
+    if (retried) {
+      finalVideos[i] = retried;
+      console.log(`[AutoTranslate] "${l.nombre}" → "${nombreEn}" encontró video (${c.codigo_iso})`);
+    } else {
+      console.log(`[AutoTranslate] "${l.nombre}" → "${nombreEn}" sin video en Vimeo (${c.codigo_iso})`);
+    }
+  });
+
+  await Promise.all(translationPromises);
+
   return {
-    // 9 imágenes en array plano: 3 por lugar, el frontend las agrupa con chunkArray(images, 3)
     images: sitios.flatMap((l, i) =>
       (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
     ),
     videos: sitios.map((l, i) => {
-      const found = youtubeResults[i];
+      const found = finalVideos[i];
       return {
         src: found ? `https://player.vimeo.com/video/${found.videoId}` : '',
         alt: found?.title ?? l.nombre,
@@ -59,6 +86,10 @@ async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos
       };
     }),
   };
+}
+
+export function clearCountryCache(iso: string) {
+  mediaCache.delete(iso.toUpperCase());
 }
 
 /** Lista básica (sin media) — barata, sin llamadas externas */

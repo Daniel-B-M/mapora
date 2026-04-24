@@ -2,6 +2,7 @@ import mongoose, { Schema, type Document } from 'mongoose';
 
 export interface ITouristPlace {
   nombre: string;
+  nombre_en?: string;
   tipo: string;
 }
 
@@ -20,7 +21,7 @@ export interface ICountry extends Document {
 }
 
 const TouristPlaceSchema = new Schema<ITouristPlace>(
-  { nombre: String, tipo: String },
+  { nombre: String, nombre_en: String, tipo: String },
   { _id: false },
 );
 

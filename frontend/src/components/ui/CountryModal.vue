@@ -72,6 +72,20 @@ function openLightbox(images: CountryMedia[], index = 0, type: 'image' | 'video'
   if (type === 'image') preloadImages(images);
 }
 
+function openVideoLightbox(video: CountryMedia | undefined, index: number) {
+  if (!video) {
+    console.warn(`[Mapora] video[${index}] es undefined — la API no devolvió este video`);
+    return;
+  }
+  const preview = video.thumbnail || video.src;
+  if (!preview) {
+    console.warn(`[Mapora] video[${index}] sin thumbnail ni src:`, video);
+  } else {
+    console.log(`[Mapora] video[${index}] preview: "${preview}" | src: "${video.src}"`);
+  }
+  openLightbox([video], 0, 'video');
+}
+
 function closeLightbox() {
   lightboxImages.value = [];
 }
@@ -204,30 +218,60 @@ function onOverlayClick(e: MouseEvent) {
             <!-- Videos column -->
             <div class="modal-column">
               <div class="media-mosaic">
-                <div class="media-large media-large--video" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox([country.videos[0]], 0, 'video')">
+                <div
+                  class="media-large media-large--video"
+                  :class="{ 'media-clickable': !loading && !!country.videos[0]?.src }"
+                  @click="!loading && !mediaClickBlocked && country.videos[0]?.src && openVideoLightbox(country.videos[0], 0)"
+                >
                   <div v-if="loading" class="skeleton" />
-                  <img v-else :src="country.videos[0]?.thumbnail || country.videos[0]?.src" :alt="country.videos[0]?.alt ?? ''" class="media-img" />
-                  <span v-if="!loading" class="media-label">{{ sitioNames[0] }}</span>
-                  <div v-if="!loading" class="play-icon">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                  <template v-else-if="country.videos[0]?.src">
+                    <img :src="country.videos[0].thumbnail || country.videos[0].src" :alt="country.videos[0].alt ?? ''" class="media-img" />
+                    <div class="play-icon">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </template>
+                  <div v-else class="no-video">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/><line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5"/></svg>
+                    <span>Sin video disponible</span>
                   </div>
+                  <span v-if="!loading" class="media-label">{{ sitioNames[0] }}</span>
                 </div>
                 <div class="media-row">
-                  <div class="media-small media-small--video" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox([country.videos[1]], 0, 'video')">
+                  <div
+                    class="media-small media-small--video"
+                    :class="{ 'media-clickable': !loading && !!country.videos[1]?.src }"
+                    @click="!loading && !mediaClickBlocked && country.videos[1]?.src && openVideoLightbox(country.videos[1], 1)"
+                  >
                     <div v-if="loading" class="skeleton" />
-                    <img v-else :src="country.videos[1]?.thumbnail || country.videos[1]?.src" :alt="country.videos[1]?.alt ?? ''" class="media-img" />
+                    <template v-else-if="country.videos[1]?.src">
+                      <img :src="country.videos[1].thumbnail || country.videos[1].src" :alt="country.videos[1].alt ?? ''" class="media-img" />
+                      <div class="play-icon play-icon--sm">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                    </template>
+                    <div v-else class="no-video no-video--sm">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/><line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5"/></svg>
+                      <span>Sin video</span>
+                    </div>
                     <span v-if="!loading" class="media-label">{{ sitioNames[1] }}</span>
-                    <div v-if="!loading" class="play-icon play-icon--sm">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-                    </div>
                   </div>
-                  <div class="media-small media-small--video" :class="{ 'media-clickable': !loading }" @click="!loading && !mediaClickBlocked && openLightbox([country.videos[2]], 0, 'video')">
+                  <div
+                    class="media-small media-small--video"
+                    :class="{ 'media-clickable': !loading && !!country.videos[2]?.src }"
+                    @click="!loading && !mediaClickBlocked && country.videos[2]?.src && openVideoLightbox(country.videos[2], 2)"
+                  >
                     <div v-if="loading" class="skeleton" />
-                    <img v-else :src="country.videos[2]?.thumbnail || country.videos[2]?.src" :alt="country.videos[2]?.alt ?? ''" class="media-img" />
-                    <span v-if="!loading" class="media-label">{{ sitioNames[2] }}</span>
-                    <div v-if="!loading" class="play-icon play-icon--sm">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                    <template v-else-if="country.videos[2]?.src">
+                      <img :src="country.videos[2].thumbnail || country.videos[2].src" :alt="country.videos[2].alt ?? ''" class="media-img" />
+                      <div class="play-icon play-icon--sm">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                    </template>
+                    <div v-else class="no-video no-video--sm">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/><line x1="3" y1="3" x2="21" y2="21" stroke-width="1.5"/></svg>
+                      <span>Sin video</span>
                     </div>
+                    <span v-if="!loading" class="media-label">{{ sitioNames[2] }}</span>
                   </div>
                 </div>
               </div>
@@ -898,6 +942,26 @@ function onOverlayClick(e: MouseEvent) {
 /* ─── Media clickable ───────────────────────────────────── */
 .media-clickable {
   cursor: pointer;
+}
+
+/* ─── No video placeholder ──────────────────────────────── */
+.no-video {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.no-video--sm {
+  gap: 0.3rem;
+  font-size: 0.6rem;
 }
 
 .expand-icon {

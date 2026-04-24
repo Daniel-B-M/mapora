@@ -79,6 +79,8 @@ watch(
   async (meshName) => {
     if (!meshName) return;
 
+    console.log('[Mapora] mesh clicked:', meshName);
+
     const base = getCountryByMesh(meshName);
     // Aplicar estado visitado local al abrir el modal
     base.visited = visitedMeshNames.value.has(meshName);
@@ -88,6 +90,7 @@ watch(
 
     try {
       const apiData = await getCountryByMeshName(meshName);
+      console.log('[Mapora] apiData:', apiData);
       if (apiData) {
         activeCountry.value = {
           ...base,
