@@ -1,6 +1,6 @@
 import { Country, type ICountry } from '../models/Country';
 import { searchImagesPerPlace } from './pexelsService';
-import { searchVideo, searchVideos, type VimeoVideo } from './vimeoService';
+import { searchVideo, type YoutubeVideo } from './youtubeService';
 import { translatePlaceName } from './translationService';
 
 export interface CountryMedia {
@@ -38,49 +38,79 @@ function buildBaseDTO(c: ICountry): Omit<CountryDTO, 'images' | 'videos'> {
   };
 }
 
+async function resolveVideo(
+  c: ICountry,
+  index: number,
+): Promise<YoutubeVideo | null> {
+  const lugar = c.lugares_turisticos[index];
+
+  // Ya tiene video guardado en DB (null = se buscó y no se encontró nada)
+  if (lugar.video_id !== undefined) {
+    if (!lugar.video_id) return null;
+    return { videoId: lugar.video_id, title: lugar.video_title ?? '', thumbnail: lugar.video_thumbnail ?? '' };
+  }
+
+  // Intento 1: buscar en español
+  const queryEs = lugar.nombre;
+  let found = await searchVideo(queryEs, 'es');
+
+  if (found) {
+    console.log(`[YouTube] "${queryEs}" encontró video en español (${c.codigo_iso})`);
+  } else {
+    // Intento 2: buscar en inglés
+    let queryEn = lugar.nombre_en;
+
+    if (!queryEn) {
+      // Traducir y guardar nombre_en para futuros usos
+      queryEn = await translatePlaceName(lugar.nombre) ?? undefined;
+      if (queryEn) {
+        await Country.updateOne(
+          { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': lugar.nombre },
+          { $set: { 'lugares_turisticos.$.nombre_en': queryEn } },
+        );
+      }
+    }
+
+    if (queryEn) {
+      found = await searchVideo(queryEn, 'en');
+      if (found) {
+        console.log(`[YouTube] "${lugar.nombre}" → "${queryEn}" encontró video en inglés (${c.codigo_iso})`);
+      }
+    }
+  }
+
+  // Persistir resultado en DB (found o null para no reintentar)
+  await Country.updateOne(
+    { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': lugar.nombre },
+    {
+      $set: {
+        'lugares_turisticos.$.video_id': found?.videoId ?? null,
+        'lugares_turisticos.$.video_title': found?.title ?? '',
+        'lugares_turisticos.$.video_thumbnail': found?.thumbnail ?? '',
+      },
+    },
+  );
+
+  return found;
+}
+
 async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos: CountryMedia[] }> {
   const sitios = c.lugares_turisticos.slice(0, 3);
   const queries = sitios.map((l) => l.nombre_en ?? l.nombre);
 
-  const [pexelsResults, vimeoResults] = await Promise.all([
+  const [pexelsResults, videoResults] = await Promise.all([
     searchImagesPerPlace(queries, 3),
-    searchVideos(queries),
+    Promise.all(sitios.map((_, i) => resolveVideo(c, i))),
   ]);
-
-  // Para los sitios sin video, intentar traducir y reintentar en background
-  const finalVideos: (VimeoVideo | null)[] = [...vimeoResults];
-  const translationPromises = sitios.map(async (l, i) => {
-    if (finalVideos[i] !== null) return; // ya tiene video, nada que hacer
-    if (l.nombre_en) return; // ya tiene nombre en inglés pero Vimeo no encontró nada
-
-    const nombreEn = await translatePlaceName(l.nombre);
-    if (!nombreEn) return;
-
-    // Guardar nombre_en siempre — aunque Vimeo no encuentre nada, evita retraducciones
-    await Country.updateOne(
-      { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': l.nombre },
-      { $set: { 'lugares_turisticos.$.nombre_en': nombreEn } },
-    );
-
-    const retried = await searchVideo(nombreEn);
-    if (retried) {
-      finalVideos[i] = retried;
-      console.log(`[AutoTranslate] "${l.nombre}" → "${nombreEn}" encontró video (${c.codigo_iso})`);
-    } else {
-      console.log(`[AutoTranslate] "${l.nombre}" → "${nombreEn}" sin video en Vimeo (${c.codigo_iso})`);
-    }
-  });
-
-  await Promise.all(translationPromises);
 
   return {
     images: sitios.flatMap((l, i) =>
       (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
     ),
     videos: sitios.map((l, i) => {
-      const found = finalVideos[i];
+      const found = videoResults[i];
       return {
-        src: found ? `https://player.vimeo.com/video/${found.videoId}` : '',
+        src: found ? `https://www.youtube.com/embed/${found.videoId}` : '',
         alt: found?.title ?? l.nombre,
         thumbnail: found?.thumbnail ?? '',
       };

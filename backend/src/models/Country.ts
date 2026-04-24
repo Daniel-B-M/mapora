@@ -4,6 +4,9 @@ export interface ITouristPlace {
   nombre: string;
   nombre_en?: string;
   tipo: string;
+  video_id?: string | null;
+  video_title?: string;
+  video_thumbnail?: string;
 }
 
 export interface ICurrency {
@@ -21,7 +24,14 @@ export interface ICountry extends Document {
 }
 
 const TouristPlaceSchema = new Schema<ITouristPlace>(
-  { nombre: String, nombre_en: String, tipo: String },
+  {
+    nombre: String,
+    nombre_en: String,
+    tipo: String,
+    video_id: { type: String, default: undefined },
+    video_title: String,
+    video_thumbnail: String,
+  },
   { _id: false },
 );
 
