@@ -1,6 +1,6 @@
 import { Country, type ICountry } from '../models/Country';
 import { searchImagesPerPlace } from './pexelsService';
-import { searchVideo, type YoutubeVideo } from './youtubeService';
+import { searchVideo, YouTubeQuotaError, type YoutubeVideo } from './youtubeService';
 import { translatePlaceName } from './translationService';
 
 export interface CountryMedia {
@@ -66,35 +66,43 @@ async function resolveVideo(
 
   // Intento 1: buscar en español (incluye nombre del país para evitar ambigüedades)
   const queryEs = `${lugar.nombre} ${c.pais}`;
-  let found = await searchVideo(queryEs, 'es');
+  let found: YoutubeVideo | null = null;
 
-  if (found) {
-    console.log(`${tag} — encontrado en YouTube ES (${found.videoId})`);
-  } else {
-    // Intento 2: buscar en inglés
-    let queryEn = lugar.nombre_en;
-
-    if (!queryEn) {
-      // Traducir y guardar nombre_en para futuros usos
-      queryEn = await translatePlaceName(lugar.nombre) ?? undefined;
-      if (queryEn) {
-        await Country.updateOne(
-          { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': lugar.nombre },
-          { $set: { 'lugares_turisticos.$.nombre_en': queryEn } },
-        );
-      }
-    }
-
-    if (queryEn) {
-      found = await searchVideo(`${queryEn} ${c.pais}`, 'en');
-      if (found) {
-        console.log(`${tag} — encontrado en YouTube EN (${found.videoId})`);
-      } else {
-        console.warn(`${tag} — YouTube no encontró nada ni en ES ni en EN`);
-      }
+  try {
+    found = await searchVideo(queryEs, 'es');
+    if (found) {
+      console.log(`${tag} — encontrado en YouTube ES (${found.videoId})`);
     } else {
-      console.warn(`${tag} — YouTube no encontró nada en ES y no hay traducción al EN`);
+      // Intento 2: buscar en inglés
+      let queryEn = lugar.nombre_en;
+
+      if (!queryEn) {
+        queryEn = await translatePlaceName(lugar.nombre) ?? undefined;
+        if (queryEn) {
+          await Country.updateOne(
+            { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': lugar.nombre },
+            { $set: { 'lugares_turisticos.$.nombre_en': queryEn } },
+          );
+        }
+      }
+
+      if (queryEn) {
+        found = await searchVideo(`${queryEn} ${c.pais}`, 'en');
+        if (found) {
+          console.log(`${tag} — encontrado en YouTube EN (${found.videoId})`);
+        } else {
+          console.warn(`${tag} — YouTube no encontró nada ni en ES ni en EN`);
+        }
+      } else {
+        console.warn(`${tag} — YouTube no encontró nada en ES y no hay traducción al EN`);
+      }
     }
+  } catch (err) {
+    if (err instanceof YouTubeQuotaError) {
+      // Quota agotada: no guardar null ni gastar intentos, reintentar mañana
+      return null;
+    }
+    throw err;
   }
 
   // Persistir resultado en DB e incrementar contador de intentos

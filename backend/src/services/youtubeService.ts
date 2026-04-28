@@ -1,5 +1,9 @@
 const YOUTUBE_API_URL = 'https://www.googleapis.com/youtube/v3/search';
 
+export class YouTubeQuotaError extends Error {
+  constructor() { super('YouTube quota exceeded'); this.name = 'YouTubeQuotaError'; }
+}
+
 export interface YoutubeVideo {
   videoId: string;
   thumbnail: string;
@@ -37,6 +41,10 @@ export async function searchVideo(query: string, lang = 'es'): Promise<YoutubeVi
 
   if (!res.ok) {
     const body = await res.text();
+    if (res.status === 403 && body.includes('quotaExceeded')) {
+      console.warn(`[Video] Quota de YouTube agotada — query: "${fullQuery}"`);
+      throw new YouTubeQuotaError();
+    }
     console.warn(`[Video] YouTube API error ${res.status} para query: "${fullQuery}"\n${body}`);
     return null;
   }
