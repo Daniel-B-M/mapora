@@ -7,6 +7,7 @@ export interface ITouristPlace {
   video_id?: string | null;
   video_title?: string;
   video_thumbnail?: string;
+  video_search_attempts?: number;
 }
 
 export interface ICurrency {
@@ -31,6 +32,7 @@ const TouristPlaceSchema = new Schema<ITouristPlace>(
     video_id: { type: String, default: undefined },
     video_title: String,
     video_thumbnail: String,
+    video_search_attempts: { type: Number, default: 0 },
   },
   { _id: false },
 );

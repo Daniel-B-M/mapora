@@ -123,8 +123,23 @@ watch(() => props.open, async (isOpen) => {
   }
 });
 
-onMounted(() => window.addEventListener('keydown', onKeydown));
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
+function onWindowBlur() {
+  if (lightboxType.value === 'video' && lightboxSrc.value) {
+    // El foco entró al iframe de YouTube — lo devolvemos al padre
+    // para que Escape siga funcionando. El setTimeout deja que
+    // YouTube procese el clic antes de recuperar el foco.
+    setTimeout(() => window.focus(), 50);
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown);
+  window.addEventListener('blur', onWindowBlur);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown);
+  window.removeEventListener('blur', onWindowBlur);
+});
 
 function onOverlayClick(e: MouseEvent) {
   if (e.target === e.currentTarget) {

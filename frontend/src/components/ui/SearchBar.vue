@@ -13,11 +13,15 @@ const query = ref('');
 const focused = ref(false);
 const activeIndex = ref(-1);
 
+function normalize(str: string) {
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 const filtered = computed(() => {
-  const q = query.value.trim().toLowerCase();
+  const q = normalize(query.value.trim());
   if (!q) return [];
   return props.suggestions
-    .filter((s) => s.displayName.toLowerCase().includes(q))
+    .filter((s) => normalize(s.displayName).includes(q))
     .slice(0, 7);
 });
 

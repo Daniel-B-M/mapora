@@ -9,18 +9,20 @@ export interface YoutubeVideo {
 export async function searchVideo(query: string, lang = 'es'): Promise<YoutubeVideo | null> {
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
-    console.warn('YOUTUBE_API_KEY no definida');
+    console.warn('[Video] YOUTUBE_API_KEY no definida');
     return null;
   }
 
+  const prefix = lang === 'es' ? 'viajando a' : 'visiting';
+  const fullQuery = `${prefix} ${query}`;
+
   const params = new URLSearchParams({
     key: apiKey,
-    q: query,
+    q: fullQuery,
     part: 'snippet',
     type: 'video',
     maxResults: '1',
     safeSearch: 'strict',
-    videoCategoryId: '19',
     videoEmbeddable: 'true',
     relevanceLanguage: lang,
   });
@@ -35,7 +37,7 @@ export async function searchVideo(query: string, lang = 'es'): Promise<YoutubeVi
 
   if (!res.ok) {
     const body = await res.text();
-    console.warn(`YouTube error ${res.status} para query: "${query}"\n${body}`);
+    console.warn(`[Video] YouTube API error ${res.status} para query: "${fullQuery}"\n${body}`);
     return null;
   }
 
@@ -50,7 +52,10 @@ export async function searchVideo(query: string, lang = 'es'): Promise<YoutubeVi
   };
 
   const item = data.items?.[0];
-  if (!item) return null;
+  if (!item) {
+    console.warn(`[Video] YouTube devolvió vacío para query: "${fullQuery}"`);
+    return null;
+  }
 
   return {
     videoId: item.id.videoId,

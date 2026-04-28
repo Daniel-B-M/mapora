@@ -44,10 +44,13 @@ export const DUMMY_COUNTRIES: Record<string, CountryData> = {
  */
 export function meshNameToDisplayName(meshName: string): string {
   return meshName
-    .replace(/\.\d+$/, '')              // quita sufijos tipo .001, .002
-    .replace(/_\d+$/, '')               // quita sufijos tipo _1, _2
-    .replace(/_/g, ' ')                 // guiones bajos → espacios
-    .replace(/\b\w/g, c => c.toUpperCase()); // capitaliza cada palabra
+    .normalize('NFC')
+    .replace(/\.\d+$/, '')
+    .replace(/_\d+$/, '')
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word ? word[0].toUpperCase() + word.slice(1) : word)
+    .join(' ');
 }
 
 export function getCountryByMesh(meshName: string): CountryData {

@@ -5,11 +5,6 @@ const showHelp = ref(false);
 const showAbout = ref(false);
 const showLogin = ref(false);
 
-function chunkArray<T>(arr: T[], size: number): T[][] {
-  const result: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
-  return result;
-}
 import ThreeCanvas from '@/components/map/ThreeCanvas.vue';
 import BaseHeadline from '@/components/ui/BaseHeadline.vue';
 import CountryModal from '@/components/ui/CountryModal.vue';
@@ -98,7 +93,7 @@ watch(
           displayName: apiData.nombre,
           infoGeneral: apiData.infoGeneral,
           lugaresTuristicos: apiData.lugaresTuristicos,
-          images: (() => { const c = chunkArray(apiData.images, 3); return c.length >= 3 ? c : base.images; })(),
+          images: apiData.images.length ? apiData.images : base.images,
           videos: apiData.videos.length ? apiData.videos : base.videos,
           visited: visitedMeshNames.value.has(meshName),
         };

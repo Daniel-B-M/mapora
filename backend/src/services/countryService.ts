@@ -14,7 +14,7 @@ export interface CountryDTO {
   nombre: string;
   infoGeneral: string[];
   lugaresTuristicos: string[];
-  images: CountryMedia[];
+  images: CountryMedia[][];
   videos: CountryMedia[];
 }
 
@@ -44,18 +44,32 @@ async function resolveVideo(
 ): Promise<YoutubeVideo | null> {
   const lugar = c.lugares_turisticos[index];
 
-  // Ya tiene video guardado en DB (null = se buscó y no se encontró nada)
-  if (lugar.video_id !== undefined) {
-    if (!lugar.video_id) return null;
+  const tag = `[Video] ${c.codigo_iso}/${lugar.nombre}`;
+
+  // Ya tiene video guardado en DB — lo sirve directamente
+  if (lugar.video_id) {
+    console.log(`${tag} — sirviendo desde DB (${lugar.video_id})`);
     return { videoId: lugar.video_id, title: lugar.video_title ?? '', thumbnail: lugar.video_thumbnail ?? '' };
   }
 
-  // Intento 1: buscar en español
-  const queryEs = lugar.nombre;
+  const attempts = lugar.video_search_attempts ?? 0;
+
+  // Sin video y ya se intentó 2 veces → no reintenta más
+  if (lugar.video_id === null && attempts >= 2) {
+    console.warn(`${tag} — sin video tras ${attempts} intentos, no se reintenta`);
+    return null;
+  }
+
+  if (lugar.video_id === null) {
+    console.log(`${tag} — DB tiene null (intento ${attempts + 1}/2), reintentando búsqueda`);
+  }
+
+  // Intento 1: buscar en español (incluye nombre del país para evitar ambigüedades)
+  const queryEs = `${lugar.nombre} ${c.pais}`;
   let found = await searchVideo(queryEs, 'es');
 
   if (found) {
-    console.log(`[YouTube] "${queryEs}" encontró video en español (${c.codigo_iso})`);
+    console.log(`${tag} — encontrado en YouTube ES (${found.videoId})`);
   } else {
     // Intento 2: buscar en inglés
     let queryEn = lugar.nombre_en;
@@ -72,14 +86,18 @@ async function resolveVideo(
     }
 
     if (queryEn) {
-      found = await searchVideo(queryEn, 'en');
+      found = await searchVideo(`${queryEn} ${c.pais}`, 'en');
       if (found) {
-        console.log(`[YouTube] "${lugar.nombre}" → "${queryEn}" encontró video en inglés (${c.codigo_iso})`);
+        console.log(`${tag} — encontrado en YouTube EN (${found.videoId})`);
+      } else {
+        console.warn(`${tag} — YouTube no encontró nada ni en ES ni en EN`);
       }
+    } else {
+      console.warn(`${tag} — YouTube no encontró nada en ES y no hay traducción al EN`);
     }
   }
 
-  // Persistir resultado en DB (found o null para no reintentar)
+  // Persistir resultado en DB e incrementar contador de intentos
   await Country.updateOne(
     { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': lugar.nombre },
     {
@@ -87,6 +105,7 @@ async function resolveVideo(
         'lugares_turisticos.$.video_id': found?.videoId ?? null,
         'lugares_turisticos.$.video_title': found?.title ?? '',
         'lugares_turisticos.$.video_thumbnail': found?.thumbnail ?? '',
+        'lugares_turisticos.$.video_search_attempts': attempts + 1,
       },
     },
   );
@@ -94,7 +113,7 @@ async function resolveVideo(
   return found;
 }
 
-async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos: CountryMedia[] }> {
+async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[][]; videos: CountryMedia[] }> {
   const sitios = c.lugares_turisticos.slice(0, 3);
   const queries = sitios.map((l) => l.nombre_en ?? l.nombre);
 
@@ -104,7 +123,7 @@ async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[]; videos
   ]);
 
   return {
-    images: sitios.flatMap((l, i) =>
+    images: sitios.map((l, i) =>
       (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
     ),
     videos: sitios.map((l, i) => {

@@ -5,7 +5,7 @@ export interface CountryDTO {
   nombre: string;
   infoGeneral: string[];
   lugaresTuristicos: string[];
-  images: { src: string; alt: string }[];
+  images: { src: string; alt: string }[][];
   videos: { src: string; alt: string; thumbnail: string }[];
 }
 
