@@ -18,7 +18,7 @@ const fullCache = new Map<string, CountryDTO>();
  *  Fuente de verdad: node names de frontend/public/mapaMundi.glb.
  *  Los nombres del GLB deben coincidir exactamente con las keys de este mapa.
  */
-const MESH_TO_ISO: Record<string, string> = {
+export const MESH_TO_ISO: Record<string, string> = {
   // ── África ────────────────────────────────────────────────
   'namibia': 'NA', 'esuatini': 'SZ', 'botsuana': 'BW',
   'sudáfrica': 'ZA', 'angola': 'AO', 'zambia': 'ZM',
@@ -93,6 +93,17 @@ const MESH_TO_ISO: Record<string, string> = {
   'surinam': 'SR', 'guyana': 'GY', 'guayana francesa': 'GF',
   'ecuador': 'EC',
 };
+
+/**
+ * Mapeo inverso: ISO -> meshName (nombre en español usado en frontend/DB).
+ */
+export const ISO_TO_MESH: Record<string, string> = Object.entries(MESH_TO_ISO).reduce(
+  (acc, [meshName, iso]) => {
+    acc[iso] = meshName;
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
 /**
  * Busca un país completo (con imágenes y videos) por mesh name.

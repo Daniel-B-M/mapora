@@ -189,8 +189,8 @@ function onSearchSelect(meshName: string) {
     </div>
 
     <!-- Search bar bottom center -->
-    <div class="absolute left-1/2 -translate-x-1/2 z-20 w-full px-4 flex justify-center" style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));">
-      <SearchBar :suggestions="searchSuggestions" @select="onSearchSelect" />
+    <div class="absolute left-1/2 -translate-x-1/2 z-20 w-full px-4 flex justify-center pointer-events-none" style="bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));">
+      <SearchBar class="pointer-events-auto" :suggestions="searchSuggestions" @select="onSearchSelect" />
     </div>
 
     <!-- Help button + shortcuts panel -->
