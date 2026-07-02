@@ -17,7 +17,7 @@ const highlightedMeshName = ref<string | null>(null);
 
 const viewMode = ref<'progress' | 'realistic'>('progress');
 const starFieldRef = shallowRef<any>(null);
-let stylizedMaterial: THREE.MeshStandardMaterial | null = null;
+let stylizedMaterial: THREE.MeshBasicMaterial | null = null;
 
 // Colores
 const defaultColor = '#505050';
