@@ -14,8 +14,7 @@ import { getCountryByMesh, meshNameToDisplayName } from '@/data/dummyCountries';
 import { getCountryByMeshName } from '@/services/countryApi';
 import { useAuthStore } from '@/stores/auth';
 import type { CountryData } from '@/types/country';
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { API_BASE } from '@/constants';
 
 const auth = useAuthStore();
 
