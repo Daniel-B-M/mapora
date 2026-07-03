@@ -37,11 +37,3 @@ export async function searchImagesForPlace(query: string, count = 3): Promise<Pe
 
   return data.photos.map((p) => ({ url: p.src.large2x, alt: p.alt || query }));
 }
-
-/**
- * Busca N imágenes por cada query en paralelo.
- * Retorna un array de arrays: una sublista por query.
- */
-export async function searchImagesPerPlace(queries: string[], count = 3): Promise<PexelsImage[][]> {
-  return Promise.all(queries.map((q) => searchImagesForPlace(q, count)));
-}

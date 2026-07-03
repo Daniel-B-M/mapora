@@ -1,5 +1,5 @@
 import { Country, type ICountry } from '../models/Country';
-import { searchImagesPerPlace } from './pexelsService';
+import { searchImagesForPlace } from './pexelsService';
 import { searchVideo, YouTubeQuotaError, type YoutubeVideo } from './youtubeService';
 import { translatePlaceName } from './translationService';
 
@@ -121,19 +121,37 @@ async function resolveVideo(
   return found;
 }
 
+async function resolveImages(c: ICountry, index: number): Promise<CountryMedia[]> {
+  const lugar = c.lugares_turisticos[index];
+
+  // Ya tiene imágenes guardadas en DB — las sirve directamente, sin llamar a Pexels
+  if (lugar.imagenes && lugar.imagenes.length > 0) {
+    return lugar.imagenes.map((img) => ({ src: img.url, alt: img.alt || lugar.nombre }));
+  }
+
+  const query = lugar.nombre_en ?? lugar.nombre;
+  const found = await searchImagesForPlace(query, 3);
+
+  if (found.length > 0) {
+    await Country.updateOne(
+      { codigo_iso: c.codigo_iso, 'lugares_turisticos.nombre': lugar.nombre },
+      { $set: { 'lugares_turisticos.$.imagenes': found } },
+    );
+  }
+
+  return found.map((img) => ({ src: img.url, alt: img.alt || lugar.nombre }));
+}
+
 async function fetchMedia(c: ICountry): Promise<{ images: CountryMedia[][]; videos: CountryMedia[] }> {
   const sitios = c.lugares_turisticos.slice(0, 3);
-  const queries = sitios.map((l) => l.nombre_en ?? l.nombre);
 
-  const [pexelsResults, videoResults] = await Promise.all([
-    searchImagesPerPlace(queries, 3),
+  const [imageResults, videoResults] = await Promise.all([
+    Promise.all(sitios.map((_, i) => resolveImages(c, i))),
     Promise.all(sitios.map((_, i) => resolveVideo(c, i))),
   ]);
 
   return {
-    images: sitios.map((l, i) =>
-      (pexelsResults[i] ?? []).map((img) => ({ src: img.url, alt: img.alt || l.nombre }))
-    ),
+    images: imageResults,
     videos: sitios.map((l, i) => {
       const found = videoResults[i];
       return {

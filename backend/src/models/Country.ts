@@ -1,5 +1,10 @@
 import mongoose, { Schema, type Document } from 'mongoose';
 
+export interface ITouristImage {
+  url: string;
+  alt: string;
+}
+
 export interface ITouristPlace {
   nombre: string;
   nombre_en?: string;
@@ -8,6 +13,7 @@ export interface ITouristPlace {
   video_title?: string;
   video_thumbnail?: string;
   video_search_attempts?: number;
+  imagenes?: ITouristImage[];
 }
 
 export interface ICurrency {
@@ -24,6 +30,11 @@ export interface ICountry extends Document {
   lugares_turisticos: ITouristPlace[];
 }
 
+const TouristImageSchema = new Schema<ITouristImage>(
+  { url: String, alt: String },
+  { _id: false },
+);
+
 const TouristPlaceSchema = new Schema<ITouristPlace>(
   {
     nombre: String,
@@ -33,6 +44,7 @@ const TouristPlaceSchema = new Schema<ITouristPlace>(
     video_title: String,
     video_thumbnail: String,
     video_search_attempts: { type: Number, default: 0 },
+    imagenes: { type: [TouristImageSchema], default: undefined },
   },
   { _id: false },
 );
