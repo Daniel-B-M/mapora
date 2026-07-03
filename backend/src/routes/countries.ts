@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { listLatam, getCountry, updatePlaceNames } from '../controllers/countryController';
+import { requireAuth } from '../middlewares/auth';
 
 const router = Router();
 
@@ -10,6 +11,6 @@ router.get('/latam', listLatam);
 router.get('/:iso', getCountry);
 
 // PATCH /api/countries/:iso/places → actualiza nombre_en de sitios turísticos
-router.patch('/:iso/places', updatePlaceNames);
+router.patch('/:iso/places', requireAuth, updatePlaceNames);
 
 export default router;
